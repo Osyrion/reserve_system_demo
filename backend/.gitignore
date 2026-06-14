@@ -1,0 +1,15 @@
+/vendor/
+/var/
+/bin/
+/.env.local
+/.env.local.php
+/.env.*.local
+/composer.phar
+/composer.lock
+/Dockerfile
+/.dockerignore
+/.idea
+/.vscode
+/node_modules
+/coverage
+/temp

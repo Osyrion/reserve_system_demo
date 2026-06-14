@@ -1,0 +1,9 @@
+includes:
+    - config.neon
+
+nettrine.dbal:
+    connection:
+        driver: pdo_sqlite
+        path: %appDir%/../var/test.sqlite
+        types:
+            uuid: App\Infrastructure\Doctrine\Type\UuidType

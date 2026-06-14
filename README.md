@@ -1,8 +1,30 @@
 # Developer Task – Barbershop Booking System
 
+- [Solution Overview](#solution-overview--architecture-notes) — Explanation of the root cause and the implemented fix, notes on architecture and codebase
 - [What to do](#what-to-do) — Main Task, Bonus Task, Submission
 - [Project Overview](#project-overview) — Architecture, Getting Started, Using the App
 - [Discussion Questions](#discussion-questions) — Interview only, not part of submission
+
+## Solution Overview & Architecture Notes
+
+> **Crucial Note:** Although the duplicate booking bug could be temporarily patched on the frontend, the **backend must always remain the single source of truth** for data integrity. The core of this fix is implemented on the backend to robustly prevent concurrent race conditions, while the frontend change serves purely as a UX defense layer.
+
+### What Was Fixed
+
+1. **Backend (Application Layer)**
+    - Implemented a validation check (`hasOverlappingBooking`) inside `CreateBookingCommandHandler` to verify slot availability before persisting data.
+    - Wrapped persistence in a `try-catch` to map `UniqueConstraintViolationException` to a clean `DomainException` instead of a 500 server error.
+
+2. **Backend (Database Layer – Ultimate Guard)**
+    - Added a `UNIQUE INDEX (stylist_id, start_time)` on `barbershop_bookings` via the Doctrine ORM mapping (`Booking.dcm.xml`), enforced at the schema level by `SchemaTool`.
+    - This constraint acts as the last line of defense against concurrent requests that slip through the application layer during a race condition — independently of all application logic.
+
+3. **Frontend (UX Layer)**
+    - Added a synchronous double-submit guard using React `useRef` to prevent duplicate requests from rapid button clicks, safely executed *after* input validation to avoid permanently blocking the form on user errors.
+
+4. **Automated Verification (Integration Tests)**
+    - Fixed and extended the integration test suite for `CreateBookingCommandHandler` to ensure the slot overlap guard and DB-level unique constraint behave exactly as expected.
+    - Full database isolation via a fresh SQLite instance created and destroyed for every test, guaranteeing clean runs with no shared state between tests. (See the **Integration Tests** section below for running instructions.)
 
 ## What to do
 
