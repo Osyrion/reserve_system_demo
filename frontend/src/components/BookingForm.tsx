@@ -97,11 +97,7 @@ export default function BookingForm({
       },
     };
 
-    // Simulate double-click: fire two identical requests concurrently
-    const [{ data }] = await Promise.all([
-      createBooking(variables),
-      createBooking(variables),
-    ]);
+    const { data } = await createBooking(variables);
 
     const errors = data?.createBooking.errors ?? [];
     if (errors.length > 0) {

@@ -13,13 +13,14 @@ use App\Domain\ValueObject\UuidFactory;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use DomainException;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
-final class CreateBookingCommandHandler
+final readonly class CreateBookingCommandHandler
 {
     public function __construct(
-        private readonly BookingRepositoryInterface $bookingRepository,
-        private readonly EntityManagerInterface $em,
-        private readonly UuidFactory $uuidFactory,
+        private BookingRepositoryInterface $bookingRepository,
+        private EntityManagerInterface $em,
+        private UuidFactory $uuidFactory,
     ) {}
 
     public function handle(CreateBookingCommand $command): CommandResult
@@ -33,6 +34,12 @@ final class CreateBookingCommandHandler
         $start = new DateTimeImmutable($command->startTime);
         $end   = $start->modify("+{$service->getDurationMinutes()} minutes");
 
+        if ($this->bookingRepository->hasOverlappingBooking(
+            $this->uuidFactory->fromString($command->stylistId), $start, $end
+        )) {
+            throw new DomainException('This time slot is no longer available.');
+        }
+
         $booking = new Booking(
             $this->uuidFactory->generate(),
             $service,
@@ -43,7 +50,11 @@ final class CreateBookingCommandHandler
             $command->customerContact,
         );
 
-        $this->bookingRepository->save($booking);
+        try {
+            $this->bookingRepository->save($booking);
+        } catch (UniqueConstraintViolationException $e) {
+            throw new DomainException('This time slot is no longer available.', previous: $e);
+        }
 
         return new CommandResult($booking->getId()->toString());
     }
